@@ -1,0 +1,29 @@
+---
+- hosts: teamspeak3
+
+  vars:
+  time: "{{lookup('pipe','date \"+%Y-%m-%d_%H:%M\"')}}"
+
+  tasks:
+  - name: Get current ts3server.ini
+    fetch:
+    src: /home/teamspeak/teamspeak3-server_linux_amd64/ts3server.ini
+    dest: current_state/{{ time }}/
+
+  - name: Get current ts3ts3db_mariadb.ini
+    fetch:
+    src: /home/teamspeak/teamspeak3-server_linux_amd64/ts3db_mariadb.ini
+    dest: current_state/{{ time }}/
+
+  - name: Get current query_ip_whitelist.txt
+    fetch:
+    src: /home/teamspeak/teamspeak3-server_linux_amd64/query_ip_whitelist.txt
+    dest: current_state/{{ time }}/
+
+  - name: Get current icons
+    synchronize:
+      src: {{ item }}
+      dest: current_state/{{ time }}/icons
+      mode: pull
+    with_items:
+    - "/home/teamspeak/teamspeak3-server_linux_amd64/files/virtualserver_1/icons"

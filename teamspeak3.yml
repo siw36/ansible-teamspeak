@@ -1,0 +1,196 @@
+---
+- name: "Deploy or update a TeamSpeak3 server"
+  hosts: teamspeak3
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+
+  vars_prompt:
+  - name: "link"
+    prompt: "Download link to TeamSpeak server files"
+    default: "http://dl.4players.de/ts/releases/3.4.0/teamspeak3-server_linux_amd64-3.4.0.tar.bz2"
+    private: no
+
+  tasks:
+  - name: Install deps
+    yum:
+      name: bzip2
+      state: present      
+
+  - name: Stop the service
+    systemd:
+      name: ts3server
+      state: stopped
+    ignore_errors: yes
+
+  - name: Create the teamspeak user
+    user:
+      name: teamspeak
+      state: present
+      shell: /bin/false
+      create_home: yes
+      home: /home/teamspeak
+
+  - name: Download TS server files
+    unarchive:
+      src: '{{ link }}'
+      dest: /home/teamspeak
+      remote_src: yes
+      owner: teamspeak
+      group: teamspeak
+      mode: '644'
+
+  - name: Make ts3server_startscript.sh executable
+    file:
+      path: /home/teamspeak/teamspeak3-server_linux_amd64/ts3server_startscript.sh
+      mode: 0750
+
+  - name: Make ts3server executable
+    file:
+      path: /home/teamspeak/teamspeak3-server_linux_amd64/ts3server
+      mode: 0750
+
+  - name: Copy MariaDB socket file
+    command: cp /home/teamspeak/teamspeak3-server_linux_amd64/redist/libmariadb.so.2 /home/teamspeak/teamspeak3-server_linux_amd64/
+
+  - name: Setup systemd script
+    copy:
+      src: systemd/ts3server
+      dest: /lib/systemd/system/ts3server.service
+      force: yes
+      mode: '755'
+  
+  - name: Reload systemd daemon
+    command: systemctl daemon-reload
+
+  - name: Setup firewall to allow TS voice port
+    firewalld:
+      port: 9987/udp
+      permanent: true
+      state: enabled
+  - name: Setup firewall to allow TS filetransfer port
+    firewalld:
+      port: 30033/tcp
+      permanent: true
+      state: enabled
+  - name: Setup firewall to allow TS serverquery port
+    firewalld:
+      port: 10011/tcp
+      permanent: true
+      state: enabled
+  - name: Setup firewall to allow TS weblist port
+    firewalld:
+      port: 2010/udp
+      permanent: true
+      state: enabled
+  - name: Setup firewall to allow TS tsdns port
+    firewalld:
+      port: 41144/tcp
+      permanent: true
+      state: enabled
+  - name: Setup firewall to allow TS accounting port
+    firewalld:
+      port: 2008/tcp
+      permanent: true
+      state: enabled
+
+  - name: Reload firewalld daemon
+    command: firewall-cmd --reload
+  
+  - name: Copy ts3server.ini
+    copy:
+      src: files/ts3server.ini
+      dest: /home/teamspeak/teamspeak3-server_linux_amd64/ts3server.ini
+      force: yes
+      mode: '755'
+      owner: teamspeak
+      group: teamspeak
+
+  - name: Copy MySQL database connection info
+    copy:
+      src: files/ts3db_mariadb.ini
+      dest: /home/teamspeak/teamspeak3-server_linux_amd64/ts3db_mariadb.ini
+      force: yes
+      mode: '750'
+      owner: teamspeak
+      group: teamspeak
+
+  - name: Copy query_ip_whitelist.txt (by default tsviewer.com is whitelisted)
+    copy:
+      src: files/query_ip_whitelist.txt
+      dest: /home/teamspeak/teamspeak3-server_linux_amd64/query_ip_whitelist.txt
+      force: yes
+      mode: '755'
+      owner: teamspeak
+      group: teamspeak
+
+  #Only for backups of icons. Initial creation of icons must be done through the servers client interface
+  #Because the server names the icons like icon_7163123 and registers them in the database
+  - name: Check if there are any icons to restore
+    local_action: command ls ./files/icons
+    register: filenames
+    become: no
+
+  - name: Copy custom icons
+    copy:
+      src: ./files/icons/
+      dest: /home/teamspeak/teamspeak3-server_linux_amd64/files/virtualserver_1/internal/icons
+      force: yes
+      mode: '755'
+      owner: teamspeak
+      group: teamspeak
+    when: filenames.stdout != ""
+
+  - name: Accept TeamSpeak license agreement
+    file:
+      path: /home/teamspeak/teamspeak3-server_linux_amd64/.ts3server_license_accepted
+      state: touch
+
+  - name: Set permissions for all files
+    file:
+      path: /home/teamspeak
+      owner: teamspeak
+      group: teamspeak
+      mode: 0750
+      recurse: yes
+  
+  - name: Start the service
+    systemd:
+      name: ts3server
+      state: started
+
+  - name: Enable ts3server service
+    systemd:
+      name: ts3server
+      enabled: yes
+
+  - name: Create directory for version check
+    file:
+      path: /home/teamspeak/version_check
+      state: directory
+      owner: teamspeak
+      group: teamspeak
+      mode: 0750
+
+  - name: Copy version_check python
+    copy:
+      src: version_check/version_check.py
+      dest: /home/teamspeak/version_check/version_check.py
+      owner: teamspeak
+      group: teamspeak
+      mode: 0660
+
+  - name: Copy version_check config
+    copy:
+      src: version_check/config.ini
+      dest: /home/teamspeak/version_check/config.ini
+      owner: teamspeak
+      group: teamspeak
+      mode: 0660
+
+  - name: Create cronjob for version check
+    cron:
+      name: Check for latest TeamSpeak verion
+      minute: 36
+      hour: 4
+      job: python /home/teamspeak/version_check/version_check.py
