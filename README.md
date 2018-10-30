@@ -12,7 +12,7 @@ The target machine should be setup for ansible:
 - A user for the TeamSpeak server that has rights on a database of the MariaDB server
 - Python needs to be installed
 - A user should be able to execute sudo commands without being asked for password confirmation
-..* You can make shure your target machine meets these requirenments by running the following bash script: [Prepare host for ansible](https://github.com/siw36/bash-prepare-workstation)
+..* You can make sure your target machine meets these requirements by running the following bash script: [Prepare host for ansible](https://github.com/siw36/bash-prepare-workstation)
 - All TeamSpeak related dependencies will be installed during the play
 
 #### How to use
@@ -29,7 +29,7 @@ Exec the teamspeak3.yml playbook to install or update a TeamSpeak 3 server.
 #### What is going on
 - The TeamSpeak server files will be downloaded from the link you provide at the start of the play
 - A new system user called `teamspeak` will be crated (without a login shell)
-- The server files will be extracted and copyed to the `teamspeak` users home directory
+- The server files will be extracted and copied to the `teamspeak` users home directory
 - Permissions will be set
 - A systemd script will be copied to the host and a service for the TeamSpeak server will be set up
 - The configuration files you customized will be copied to the target host
@@ -37,7 +37,7 @@ Exec the teamspeak3.yml playbook to install or update a TeamSpeak 3 server.
 - Icons from the repository directory `files/icons` will be copied to the target host (useful if you are reinstalling a new server with an existing MariaDB database)
 - The teamspeak server gets started
 - A python script will be copied to the target host
-- A cronjob will be sheduled for everyday at 4:36AM to run the python script
+- A cronjob will be scheduled for everyday at 4:36AM to run the python script
 > This python script will parse the `https://teamspeak.com/en/downloads/#server` website and will extract the latest stable version of TeamSpeak3 Server. It will send an email to the specified address in the `config.ini` file if your server is not running the latest version of TeamSpeak3.
 ---
 
