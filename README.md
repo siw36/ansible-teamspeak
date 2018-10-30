@@ -18,7 +18,7 @@ The target machine should be setup for ansible:
 #### How to use
 1. Customize your ansible host file:
 - add a group named `teamspeak3`
-- add th desired hosts (ip/hostname) to the `teamspeak3` group inside your host file
+- add the desired hosts (ip/hostname) to the `teamspeak3` group inside your host file
 2. Customize the configuration files in the repository
 - MariaDB connection details in: `files/ts3db_mariadb.ini`
 - TeamSpeak server configuration file in: `files/ts3server.ini`
