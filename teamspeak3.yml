@@ -124,6 +124,11 @@
       owner: teamspeak
       group: teamspeak
 
+  - name: Create the icons dir if it is not present (local)
+    local_action: mkdir ./files/icons
+    ignore_errors: yes
+    become: no
+
   #Only for backups of icons. Initial creation of icons must be done through the servers client interface
   #Because the server names the icons like icon_7163123 and registers them in the database
   - name: Check if there are any icons to restore
