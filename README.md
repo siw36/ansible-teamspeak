@@ -15,8 +15,9 @@ Ansible:
 
 Database:
 - MariaDB server (external or on the same machine)
-- A user for the TeamSpeak server that has rights on a database of the MariaDB server
+- A MariaDB user that has full access rights to a database on the MariaDB server
 
+Other:
 - All TeamSpeak related dependencies will be installed during the play
 
 #### How to use
