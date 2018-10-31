@@ -3,16 +3,20 @@
 ## About
 This playbook installs or updates a TeamSpeak server
 Simply provide the download link to the TeamSpeak server files and the playbook will automatically set everything up.
+
 ---
 
 ### TeamSpeak 3 Server
 #### Dependencies
-The target machine should be setup for ansible:
-- MariaDB server (external or on the same machine)
-- A user for the TeamSpeak server that has rights on a database of the MariaDB server
+Ansible:
 - Python needs to be installed
 - A user should be able to execute sudo commands without being asked for password confirmation
 ..* You can make sure your target machine meets these requirements by running the following bash script: [Prepare host for ansible](https://github.com/siw36/bash-prepare-workstation)
+
+Database:
+- MariaDB server (external or on the same machine)
+- A user for the TeamSpeak server that has rights on a database of the MariaDB server
+
 - All TeamSpeak related dependencies will be installed during the play
 
 #### How to use
