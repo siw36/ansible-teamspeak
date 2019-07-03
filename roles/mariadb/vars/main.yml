@@ -1,0 +1,8 @@
+---
+mariaRootPW: xxx
+
+mariaTSUserName: teamspeak
+mariaTSUserPW: xxx
+mariaTSDBName: teamspeak
+
+tsServerIP: 10.0.1.11

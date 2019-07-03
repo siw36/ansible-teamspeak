@@ -1,0 +1,22 @@
+---
+tsServiceName: teamspeak
+tsUserName: teamspeak
+tsUserHome: /home/teamspeak
+tsRootDir: teamspeak3-server_linux_amd64
+dbSock: redist/libmariadb.so.2
+tsExecutables:
+  - ts3server
+  - ts3server_startscript.sh
+tsPorts:
+  - 9987/udp
+  - 30033/tcp
+  - 10011/tcp
+  - 2010/udp
+  - 41144/tcp
+  - 2008/tcp
+
+depPackages:
+  - bzip2
+  - rsync
+
+systemdDir: /lib/systemd/system

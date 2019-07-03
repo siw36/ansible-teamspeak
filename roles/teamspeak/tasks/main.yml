@@ -1,0 +1,171 @@
+---
+- name: Set the hostname of the machine
+  hostname:
+    name: "{{ ansible_fqdn }}"
+
+- name: Upgrade system
+  package:
+    name: '*'
+    state: latest
+
+- name: Install dependencies
+  package:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ depPackages }}"
+
+- name: Check if machine already got TeamSpeak running
+  shell: "cat {{ systemdDir }}/{{ tsServiceName }}.service"
+  register: serviceStatus
+  ignore_errors: true
+
+- name: Upgrade block
+  block:
+    - name: Stop the TeamSpeak service
+      systemd:
+        name: "{{ tsServiceName }}"
+        state: stopped
+
+    - name: Set the current backup directory name
+      set_fact:
+        backupDir: "/usr/share/teamspeak_backup/{{ lookup('pipe','date +%Y-%m-%d-%H-%M-%S') }}"
+
+    - name: Create backup directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /usr/share/teamspeak_backup
+        - "{{ backupDir }}"
+
+    - name: Check if files are present
+      stat:
+        path: "{{ item }}"
+      register: filesPresent
+      loop:
+        - "{{ tsUserHome }}/{{ tsRootDir }}/ts3server.ini"
+        - "{{ tsUserHome }}/{{ tsRootDir }}/ts3db_mariadb.ini"
+        - "{{ tsUserHome }}/{{ tsRootDir }}/query_ip_whitelist.txt"
+        - "{{ tsUserHome }}/{{ tsRootDir }}/files"
+
+    - name: Create a backup
+      synchronize:
+        src: "{{ item.stat.path }}"
+        dest: "{{ backupDir }}/"
+      delegate_to: "{{ inventory_hostname }}"
+      loop: "{{ filesPresent.results }}"
+      when: item.stat.exists
+
+  when: serviceStatus.rc == 0
+
+- name: Create TeamSpeak user
+  user:
+    name: "{{ tsUserName }}"
+    state: present
+    shell: /bin/false
+    create_home: yes
+    home: "{{ tsUserHome }}"
+
+- name: Download TeamSpeak server files
+  unarchive:
+    src: '{{ tsDownloadLink }}'
+    dest: "{{ tsUserHome }}"
+    remote_src: yes
+    owner: "{{ tsUserName }}"
+    group: "{{ tsUserName }}"
+    mode: 0740
+
+- name: Make TeamSpeak scripts executable
+  file:
+    path: "{{ tsUserHome }}/{{ tsRootDir }}/{{ item }}"
+    mode: 0750
+  loop: "{{ tsExecutables }}"
+
+- name: Copy MariaDB socket file
+  copy:
+    src: "{{ tsUserHome }}/{{ tsRootDir }}/{{ dbSock }}"
+    dest: "{{ tsUserHome }}/{{ tsRootDir }}/"
+    remote_src: true
+    mode: 0740
+
+- name: Render and copy TeamSpeak systemd service file to target
+  template:
+    src: templates/teamspeak.service.j2
+    dest: "{{ systemdDir }}/{{ tsServiceName }}.service"
+    mode: 0755
+
+- name: Reload systemd daemon
+  command: systemctl daemon-reload
+
+- name: Setup firewall to allow TS ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+  loop: "{{ tsPorts }}"
+
+- name: Reload firewalld daemon
+  command: firewall-cmd --reload
+
+- name: Render and copy TeamSpeak configuration file to target
+  template:
+    src: templates/teamspeak-config.ini.j2
+    dest: "{{ tsUserHome }}/{{ tsRootDir }}/ts3server.ini"
+    mode: 0640
+    owner: "{{ tsUserName }}"
+    group: "{{ tsUserName }}"
+
+- name: Render and copy Mariadb database connection info
+  template:
+    src: templates/teamspeak-mariadb.ini.j2
+    dest: "{{ tsUserHome }}/{{ tsRootDir }}/ts3db_mariadb.ini"
+    mode: 0640
+    owner: "{{ tsUserName }}"
+    group: "{{ tsUserName }}"
+
+- name: Render and copy query whitelist
+  template:
+    src: templates/query-whitelist.txt.j2
+    dest: "{{ tsUserHome }}/{{ tsRootDir }}/query_ip_whitelist.txt"
+    mode: 0640
+    owner: "{{ tsUserName }}"
+    group: "{{ tsUserName }}"
+
+- name: Accept TeamSpeak license agreement
+  file:
+    path: "{{ tsUserHome }}/{{ tsRootDir }}/.ts3server_license_accepted"
+    state: touch
+
+- name: Set owner and group for all files
+  file:
+    path: "{{ tsUserHome }}"
+    owner: "{{ tsUserName }}"
+    group: "{{ tsUserName }}"
+    recurse: yes
+
+- name: Upgrade block - post
+  block:
+    - name: Check if backup files are present
+      stat:
+        path: "{{ item }}"
+      register: filesPresentBackup
+      loop:
+        - "{{ backupDir }}/ts3server.ini"
+        - "{{ backupDir }}/ts3db_mariadb.ini"
+        - "{{ backupDir }}/query_ip_whitelist.txt"
+        - "{{ backupDir }}/files"
+
+    - name: Restore backup after upgrade
+      synchronize:
+        src: "{{ item.stat.path }}"
+        dest: "{{ tsUserHome }}/{{ tsRootDir }}/"
+      delegate_to: "{{ inventory_hostname }}"
+      loop: "{{ filesPresentBackup.results }}"
+      when: item.stat.exists
+  when: serviceStatus.rc == 0
+
+- name: Start and enable the TeamSpeak service
+  systemd:
+    name: "{{ tsServiceName }}"
+    state: started
+    enabled: true

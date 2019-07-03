@@ -1,0 +1,13 @@
+- name: Deploy or update a TeamSpeak3 server
+  hosts: teamspeak3
+  remote_user: ansible
+  become: yes
+  become_method: sudo
+  vars_prompt:
+  - name: tsDownloadLink
+    prompt: Download link to TeamSpeak server files
+    default: "https://files.teamspeak-services.com/releases/server/3.9.0/teamspeak3-server_linux_amd64-3.9.0.tar.bz2"
+    private: no
+  roles:
+    - mariadb
+    - teamspeak
