@@ -1,5 +1,2 @@
-files/query_ip_whitelist.txt
-files/ts3server.ini
-files/ts3db_mariadb.ini
-version_check/config.ini
+inventory.ini
 *.retry

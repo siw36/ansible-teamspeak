@@ -1,0 +1,12 @@
+---
+mariaHost: 127.0.0.1
+mariaPort: 3306
+mariaTSUserName: teamspeak
+mariaTSDBName: teamspeak
+mariaTSUserPW: xxx
+
+tsQueryWhitelist:
+  # TS-Viewer
+  - 94.23.235.222
+
+#tsLicenseFile: /some/path

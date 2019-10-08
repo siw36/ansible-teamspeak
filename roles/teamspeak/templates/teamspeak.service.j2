@@ -1,0 +1,21 @@
+[Unit]
+Description=TeamSpeak Server Service
+After=network.target
+
+[Service]
+Type=forking
+WorkingDirectory={{ tsUserHome }}/{{ tsRootDir }}/
+ExecStart={{ tsUserHome }}/{{ tsRootDir }}/ts3server_startscript.sh start inifile=ts3server.ini
+ExecStop={{ tsUserHome }}/{{ tsRootDir }}/ts3server_startscript.sh stop
+User={{ tsUserName }}
+Group={{ tsUserName }}
+PIDFile={{ tsUserHome }}/{{ tsRootDir }}/ts3server.pid
+Restart=on-failure
+RestartSec=15s
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier={{ tsServiceName }}
+Environment=LD_LIBRARY_PATH={{ tsUserHome }}/{{ tsRootDir }}/
+
+[Install]
+WantedBy=multi-user.target

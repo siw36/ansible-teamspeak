@@ -1,0 +1,6 @@
+---
+mariaHost: localhost
+mariaPort: 3306
+mariaRootUserName: root
+
+mariaPackage: mariadb-server

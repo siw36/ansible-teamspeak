@@ -1,0 +1,94 @@
+---
+- name: Install MariaDB package and dependencies
+  package:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - epel-release
+    - "{{ mariaPackage }}"
+    - python-pip
+
+- name: Install ansible dependencies for mariadb
+  pip:
+    name: PyMySQL
+    state: latest
+
+- name: Setup firewall to allow mariadb ports
+  firewalld:
+    port: 3306/tcp
+    permanent: true
+    state: enabled
+
+- name: Reload firewalld daemon
+  command: firewall-cmd --reload
+
+- name: Start and enable MariaDB service
+  systemd:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Remove the anonymous user
+  mysql_user:
+    login_host: "{{ mariaHost }}"
+    login_port: "{{ mariaPort }}"
+    login_user: "{{ mariaRootUserName }}"
+    login_password: "{{ mariaRootPW }}"
+    user: ""
+    host: "{{ item }}"
+    state: absent
+  loop:
+    - localhost
+    - "{{ ansible_fqdn }}"
+
+- name: Delete the test database
+  mysql_db:
+    login_host: "{{ mariaHost }}"
+    login_port: "{{ mariaPort }}"
+    login_user: "{{ mariaRootUserName }}"
+    login_password: "{{ mariaRootPW }}"
+    name: test
+    state: absent
+
+- name: Set the root password and require it on login
+  mysql_user:
+    login_host: "{{ mariaHost }}"
+    login_port: "{{ mariaPort }}"
+    login_user: "{{ mariaRootUserName }}"
+    login_password: "{{ mariaRootPW }}"
+    user: "{{ mariaRootUserName }}"
+    password: "{{ mariaRootPW }}"
+    host: "{{ item }}"
+    state: present
+  loop:
+    - localhost
+    - "::1"
+    - 127.0.0.1
+    - "{{ ansible_fqdn }}"
+
+- name: Create the TeamSpeak database
+  mysql_db:
+    login_host: "{{ mariaHost }}"
+    login_port: "{{ mariaPort }}"
+    login_user: "{{ mariaRootUserName }}"
+    login_password: "{{ mariaRootPW }}"
+    name: "{{ mariaTSDBName }}"
+    state: present
+
+- name: Create the TeamSpeak user
+  mysql_user:
+    login_host: "{{ mariaHost }}"
+    login_port: "{{ mariaPort }}"
+    login_user: "{{ mariaRootUserName }}"
+    login_password: "{{ mariaRootPW }}"
+    user: "{{ mariaTSUserName }}"
+    password: "{{ mariaTSUserPW }}"
+    host: "{{ item }}"
+    priv: "{{ mariaTSDBName }}.*:ALL"
+    state: present
+  loop:
+    - localhost
+    - "::1"
+    - 127.0.0.1
+    - "{{ ansible_fqdn }}"
+    - "{{ tsServerIP }}"
